@@ -6,6 +6,8 @@ var colors = require('colors');
 var program = require('commander');
 var moment = require('moment');
 var shell = require('shelljs');
+var rc = require('rc');
+var pkg = require('../package.json');
 
 program
 .option('--init', 'initialize a new changelog')
@@ -14,6 +16,12 @@ program
 .parse(process.argv);
 
 var basedir = process.cwd();
+var config = rc(pkg.name, {
+    tag: {
+        annotated: false,
+        format: "v{{version}}"
+    }
+});
 
 // lowercase variations will be tried automatically
 var k_changelog_files = [
@@ -117,7 +125,7 @@ else if (program.release) {
     // TODO if git commit fails, rollback versions
 
     // commit message and tag name
-    var tag = 'v' + new_version;
+    var tag = config.tag.format.replace(new RegExp('{{version}}','g'), new_version);
 
     var cmd = 'git add ' + changelog_file;
     shell.exec(cmd); //, { silent: true })
@@ -128,7 +136,10 @@ else if (program.release) {
     var cmd = 'git commit -m ' + tag;
     shell.exec(cmd); //, { silent: true })
 
-    var cmd = 'git tag ' + tag;
+    var cmd = config.tag.annotated?
+        'git tag -a "' + tag + '" -m "' + tag + '"' :
+        'git tag ' + tag;
+
     shell.exec(cmd);
 
     console.log(('don\'t forget to run "git push && git push origin ' + tag + '"').yellow);
